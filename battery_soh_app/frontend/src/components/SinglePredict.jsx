@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import GaugeChart from './GaugeChart';
 
-const API = 'http://localhost:5001/api';
+const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
+
 
 const FEATURES = [
   { key: 'cycle',       label: 'Cycle Number',  unit: '',    min: 1,    max: 168,   step: 1,    decimals: 0, default: 50  },

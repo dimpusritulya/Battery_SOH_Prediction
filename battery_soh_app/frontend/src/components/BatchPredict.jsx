@@ -5,7 +5,8 @@ import {
   Tooltip, ResponsiveContainer
 } from 'recharts';
 
-const API = 'http://localhost:5001/api';
+const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
+
 
 const SAMPLE_CSV = `cycle,voltage,temperature
 10,3.70,25.0

@@ -5,7 +5,8 @@ import {
   Radar, ResponsiveContainer, Tooltip
 } from 'recharts';
 
-const API = 'http://localhost:5001/api';
+const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
+
 
 const STATIC_METRICS = {
   name: 'Support Vector Regression (SVR)',

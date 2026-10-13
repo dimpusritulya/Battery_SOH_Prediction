@@ -5,7 +5,8 @@ import {
   Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
 
-const API = 'http://localhost:5001/api';
+const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
+
 
 const PRESETS = [
   { label: 'Room Temp, Nominal V',   voltage: 3.42, temperature: 26.0 },

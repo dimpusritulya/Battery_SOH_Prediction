@@ -5,7 +5,11 @@ import BatchPredict    from './components/BatchPredict';
 import ModelInfo       from './components/ModelInfo';
 import './index.css';
 
-const API = 'http://localhost:5001/api';
+// API base URL: relative path works both on Vercel (rewrite → backend service)
+// and locally when using `vercel dev`. For plain `npm run dev`, start the Flask
+// server separately and use VITE_API_BASE if needed.
+const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
+
 
 const TABS = [
   { id: 'predict',  label: 'Live Predict',  icon: '⚡' },
