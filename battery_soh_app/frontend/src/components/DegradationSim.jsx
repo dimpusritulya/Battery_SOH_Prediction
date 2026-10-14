@@ -1,18 +1,17 @@
 /* DegradationSim.jsx — Simulate SOH degradation across cycles */
 import { useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
 
 const API = (import.meta.env.VITE_API_BASE ?? '') + '/api';
 
-
 const PRESETS = [
-  { label: 'Room Temp, Nominal V',   voltage: 3.42, temperature: 26.0 },
-  { label: 'High Temp, High V',      voltage: 3.70, temperature: 45.0 },
-  { label: 'Low Temp, Low V',        voltage: 2.80, temperature: 10.0 },
-  { label: 'Optimal Conditions',     voltage: 3.55, temperature: 22.0 },
+  { label: 'Room Temp, Nominal V',  voltage: 3.42, temperature: 26.0 },
+  { label: 'High Temp, High V',     voltage: 3.70, temperature: 45.0 },
+  { label: 'Low Temp, Low V',       voltage: 2.80, temperature: 10.0 },
+  { label: 'Optimal Conditions',    voltage: 3.55, temperature: 22.0 },
 ];
 
 const CustomTooltip = ({ active, payload }) => {
@@ -30,9 +29,70 @@ const CustomTooltip = ({ active, payload }) => {
   );
 };
 
+/* Shared number input used for both voltage and temperature */
+function ParamInput({ id, label, unit, hint, icon, value, rawValue, step, decimals, onChange, onBlur, accentColor = 'var(--clr-primary)' }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <label
+          htmlFor={id}
+          style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--clr-text-2)', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <span>{icon}</span>
+          <span>{label}</span>
+        </label>
+        <span style={{ fontSize: '0.72rem', color: 'var(--clr-text-3)' }}>{hint}</span>
+      </div>
+      <div style={{ position: 'relative' }}>
+        <input
+          id={id}
+          type="number"
+          step={step}
+          value={rawValue}
+          placeholder={String(value)}
+          onChange={onChange}
+          onFocus={(e) => {
+            e.target.style.borderColor = accentColor;
+            e.target.style.boxShadow   = `0 0 0 3px ${accentColor}20`;
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--clr-border)';
+            e.target.style.boxShadow   = 'none';
+            if (onBlur) onBlur(e);
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 52px 12px 16px',
+            background: 'var(--clr-surface-2)',
+            border: '1px solid var(--clr-border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--clr-text)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            appearance: 'none',
+            MozAppearance: 'textfield',
+          }}
+        />
+        <div style={{
+          position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+          color: accentColor, fontFamily: 'var(--font-mono)', fontSize: '0.85rem',
+          fontWeight: 700, pointerEvents: 'none',
+        }}>
+          {unit}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DegradationSim() {
   const [voltage,     setVoltage]     = useState(3.42);
   const [temperature, setTemperature] = useState(26.0);
+  const [rawVoltage,  setRawVoltage]  = useState('3.42');
+  const [rawTemp,     setRawTemp]     = useState('26.0');
   const [curveData,   setCurveData]   = useState(null);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState(null);
@@ -43,9 +103,9 @@ export default function DegradationSim() {
     setError(null);
     try {
       const res = await fetch(`${API}/simulate`, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voltage, temperature, steps: 100 }),
+        body:    JSON.stringify({ voltage, temperature, steps: 100 }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
@@ -61,18 +121,32 @@ export default function DegradationSim() {
   const applyPreset = (p) => {
     setVoltage(p.voltage);
     setTemperature(p.temperature);
+    setRawVoltage(String(p.voltage));
+    setRawTemp(String(p.temperature));
+  };
+
+  const handleVoltageChange = (e) => {
+    setRawVoltage(e.target.value);
+    const num = parseFloat(e.target.value);
+    if (!isNaN(num)) setVoltage(parseFloat(num.toFixed(2)));
+  };
+
+  const handleTempChange = (e) => {
+    setRawTemp(e.target.value);
+    const num = parseFloat(e.target.value);
+    if (!isNaN(num)) setTemperature(parseFloat(num.toFixed(1)));
   };
 
   const degradation = curveData ? curveData.total_degradation : null;
-  const startSoh    = curveData ? curveData.start_soh * 100 : null;
-  const endSoh      = curveData ? curveData.end_soh   * 100 : null;
+  const startSoh    = curveData ? curveData.start_soh * 100   : null;
+  const endSoh      = curveData ? curveData.end_soh   * 100   : null;
 
   return (
     <div>
       <div className="section-header">
         <h2 className="section-title">📉 Degradation Simulator</h2>
         <p className="section-subtitle">
-          Fix voltage &amp; temperature, then simulate how SOH evolves across 168 charge cycles
+          Enter voltage &amp; temperature, then simulate how SOH evolves across charge cycles
         </p>
       </div>
 
@@ -100,51 +174,37 @@ export default function DegradationSim() {
             </div>
           </div>
 
-          {/* Voltage Slider */}
-          <div className="input-group">
-            <label className="input-label">
-              <span>Voltage</span>
-              <span className="input-value">{voltage.toFixed(2)} V</span>
-            </label>
-            <input
-              id="sim-voltage"
-              type="range" className="slider"
-              min={2.53} max={3.75} step={0.01}
-              value={voltage}
-              onChange={(e) => setVoltage(parseFloat(parseFloat(e.target.value).toFixed(2)))}
-              style={{
-                background: `linear-gradient(to right, var(--clr-primary) 0%, var(--clr-primary) ${
-                  ((voltage - 2.53) / (3.75 - 2.53)) * 100
-                }%, rgba(255,255,255,0.1) ${
-                  ((voltage - 2.53) / (3.75 - 2.53)) * 100
-                }%, rgba(255,255,255,0.1) 100%)`,
-              }}
-            />
-            <div className="slider-range"><span>2.53 V</span><span>3.75 V</span></div>
-          </div>
+          {/* Voltage input */}
+          <ParamInput
+            id="sim-voltage"
+            label="Voltage"
+            unit="V"
+            hint="Terminal voltage"
+            icon="⚡"
+            value={voltage}
+            rawValue={rawVoltage}
+            step={0.01}
+            decimals={2}
+            accentColor="var(--clr-primary)"
+            onChange={handleVoltageChange}
+            onBlur={() => setRawVoltage(voltage.toFixed(2))}
+          />
 
-          {/* Temperature Slider */}
-          <div className="input-group">
-            <label className="input-label">
-              <span>Temperature</span>
-              <span className="input-value">{temperature.toFixed(1)} °C</span>
-            </label>
-            <input
-              id="sim-temperature"
-              type="range" className="slider"
-              min={7.68} max={54.99} step={0.1}
-              value={temperature}
-              onChange={(e) => setTemperature(parseFloat(parseFloat(e.target.value).toFixed(1)))}
-              style={{
-                background: `linear-gradient(to right, var(--clr-accent) 0%, var(--clr-accent) ${
-                  ((temperature - 7.68) / (54.99 - 7.68)) * 100
-                }%, rgba(255,255,255,0.1) ${
-                  ((temperature - 7.68) / (54.99 - 7.68)) * 100
-                }%, rgba(255,255,255,0.1) 100%)`,
-              }}
-            />
-            <div className="slider-range"><span>7.68 °C</span><span>54.99 °C</span></div>
-          </div>
+          {/* Temperature input */}
+          <ParamInput
+            id="sim-temperature"
+            label="Temperature"
+            unit="°C"
+            hint="Cell / ambient temperature"
+            icon="🌡"
+            value={temperature}
+            rawValue={rawTemp}
+            step={0.1}
+            decimals={1}
+            accentColor="var(--clr-accent)"
+            onChange={handleTempChange}
+            onBlur={() => setRawTemp(temperature.toFixed(1))}
+          />
 
           <button
             id="run-simulation-btn"
@@ -167,8 +227,8 @@ export default function DegradationSim() {
                 Results
               </div>
               {[
-                { label: 'Start SOH',       value: `${startSoh.toFixed(2)}%` },
-                { label: 'End SOH',         value: `${endSoh.toFixed(2)}%` },
+                { label: 'Start SOH',         value: `${startSoh.toFixed(2)}%` },
+                { label: 'End SOH',           value: `${endSoh.toFixed(2)}%` },
                 { label: 'Total Degradation', value: `${degradation.toFixed(2)}%`, color: degradation > 0 ? '#ff3366' : '#00ff88' },
               ].map((m) => (
                 <div key={m.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
@@ -210,8 +270,8 @@ export default function DegradationSim() {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={0.90} stroke="#00ff88" strokeDasharray="4 4" label={{ value: '90% Excellent', fill: '#00ff8866', fontSize: 10 }} />
-                <ReferenceLine y={0.75} stroke="#ffaa00" strokeDasharray="4 4" label={{ value: '75% Good', fill: '#ffaa0066', fontSize: 10 }} />
-                <ReferenceLine y={0.60} stroke="#ff3366" strokeDasharray="4 4" label={{ value: '60% Fair', fill: '#ff336666', fontSize: 10 }} />
+                <ReferenceLine y={0.75} stroke="#ffaa00" strokeDasharray="4 4" label={{ value: '75% Good',      fill: '#ffaa0066', fontSize: 10 }} />
+                <ReferenceLine y={0.60} stroke="#ff3366" strokeDasharray="4 4" label={{ value: '60% Fair',      fill: '#ff336666', fontSize: 10 }} />
                 <Area
                   type="monotone"
                   dataKey="soh"
@@ -228,15 +288,12 @@ export default function DegradationSim() {
           ) : (
             <div style={{
               height: 340,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--clr-text-3)',
-              gap: 12,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              color: 'var(--clr-text-3)', gap: 12,
             }}>
               <div style={{ fontSize: '2.5rem' }}>📊</div>
-              <div style={{ fontSize: '0.9rem' }}>Set parameters and click <strong style={{ color: 'var(--clr-primary)' }}>Run Simulation</strong></div>
+              <div style={{ fontSize: '0.9rem' }}>Enter values and click <strong style={{ color: 'var(--clr-primary)' }}>Run Simulation</strong></div>
               <div style={{ fontSize: '0.78rem', opacity: 0.7 }}>The degradation curve will appear here</div>
             </div>
           )}
