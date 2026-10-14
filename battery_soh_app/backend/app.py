@@ -30,6 +30,10 @@ def load_model():
         print(f"❌ Failed to load model: {e}")
         model = None
 
+# Load at import time so the model is available whether Flask is started
+# via `python app.py`, `flask run`, `gunicorn`, or `vercel dev`.
+load_model()
+
 # ─── Feature ranges from training data ────────────────────────────────────────
 FEATURE_RANGES = {
     "cycle":       {"min": 1,     "max": 168,   "mean": 55.39,  "unit": ""},
@@ -231,5 +235,5 @@ def simulate():
 
 # ─── Entry Point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    load_model()
+    # Model is already loaded at module level above; just start the dev server.
     app.run(debug=True, port=5001, host="0.0.0.0")
